@@ -318,11 +318,11 @@ print(f"🔍 DENO_BIN = {DENO_BIN}")
 
 async def get_media_info(url):
     cookies = get_cookies_args(url)
+    # نحاول أولاً بالطريقة الحديثة (بدون Deno)
     cmd = ["yt-dlp", "--dump-json", "--no-playlist",
-           "--js-runtimes", f"deno:{DENO_BIN}",
-           "--remote-components", "ejs:github",
+           "--extractor-args", "youtube:player_client=android,web",
            *COMMON_HEADERS, *cookies, url]
-    print(f"🔍 Running: {' '.join(cmd[:8])}...")
+    print(f"🔍 Running: yt-dlp with android client")
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -331,9 +331,28 @@ async def get_media_info(url):
         if proc.returncode == 0 and out:
             return json.loads(out.decode().strip().split("\n")[0])
         else:
-            print(f"🔍 ERROR: {err.decode()[:800]}")
+            print(f"🔍 ERROR1: {err.decode()[:500]}")
     except Exception as e:
-        print(f"get_media_info err: {e}")
+        print(f"get_media_info err1: {e}")
+
+    # لو فشل، نجرب مع Deno
+    cmd2 = ["yt-dlp", "--dump-json", "--no-playlist",
+            "--js-runtimes", f"deno:{DENO_BIN}",
+            "--remote-components", "ejs:github",
+            *COMMON_HEADERS, *cookies, url]
+    print(f"🔍 Running: yt-dlp with deno")
+    try:
+        proc2 = await asyncio.create_subprocess_exec(
+            *cmd2, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        out2, err2 = await asyncio.wait_for(proc2.communicate(), timeout=90.0)
+        if proc2.returncode == 0 and out2:
+            return json.loads(out2.decode().strip().split("\n")[0])
+        else:
+            print(f"🔍 ERROR2: {err2.decode()[:500]}")
+    except Exception as e:
+        print(f"get_media_info err2: {e}")
+
     return {}
 
 async def get_playlist_flat(url):
