@@ -312,15 +312,21 @@ COMMON_HEADERS = [
 ]
 
 async def get_media_info(url):
+    import shutil
+    print(f"🔍 DEBUG deno: {shutil.which('deno')}")
+    print(f"🔍 DEBUG PATH: {os.environ.get('PATH', 'N/A')}")
     cookies = get_cookies_args(url)
     cmd = ["yt-dlp", "--dump-json", "--no-playlist", *COMMON_HEADERS, *cookies, url]
+    print(f"🔍 DEBUG cmd: {' '.join(cmd)}")
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-        out, _ = await asyncio.wait_for(proc.communicate(), timeout=60.0)
+        out, err = await asyncio.wait_for(proc.communicate(), timeout=60.0)
         if proc.returncode == 0 and out:
             return json.loads(out.decode().strip().split("\n")[0])
+        else:
+            print(f"🔍 DEBUG err output: {err.decode()[:500]}")
     except Exception as e:
         print(f"get_media_info err: {e}")
     return {}
